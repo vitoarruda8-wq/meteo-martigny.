@@ -1,7 +1,7 @@
 name: Meteo Matin
 on:
   schedule:
-    - cron: '0 4,5 * * *' # 04:00 et 05:00 UTC = 06:00 et 07:00 en Suisse
+    - cron: '0 4,5 * * *' # 6h et 7h du matin en Suisse
   workflow_dispatch:
 
 jobs:
@@ -9,13 +9,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Set up Python
+      - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
       - name: Install requests
         run: pip install requests
       - name: Run script
-        env:
-          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         run: python weather_bot.py
