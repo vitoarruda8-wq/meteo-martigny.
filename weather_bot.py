@@ -2,106 +2,57 @@ import requests
 from datetime import datetime
 import xml.etree.ElementTree as ET
 
-# CONFIGURATION
+# Configuration
 WEBHOOK_URL = "https://discord.com/api/webhooks/1501291354641268801/AbpyLv1jv_Qru8fOQlqyEv98TbHhCdo-aLfJc8qM5YnzX9Mq_EucvUmNyA1ZD6CeJVh6"
-BOT_NAME = "L'Oracle de Martigny 🏔️"
-BOT_ICON = "https://cdn-icons-png.flaticon.com/512/3891/3891464.png"
 
 def get_level():
-    # Fixé au 5 Mai 2026
-    start_date = datetime(2026, 5, 5).date()
-    today = datetime.now().date()
-    if today < start_date:
-        return 1
-    return (today - start_date).days + 1
+    # Début de l'aventure le 5 mai 2026
+    start = datetime(2026, 5, 5).date()
+    now = datetime.now().date()
+    return max(1, (now - start).days + 1)
 
-def get_news():
+def fetch_intel():
+    # Récupération des actualités via Google News
+    headers = {'User-Agent': 'Mozilla/5.0'}
     try:
-        headers = {'User-Agent': 'Mozilla/5.0'}
         url = "https://news.google.com/rss/search?q=Suisse&hl=fr&gl=CH&ceid=CH:fr"
         r = requests.get(url, headers=headers, timeout=10)
         root = ET.fromstring(r.content)
-        items = []
-        for item in root.findall('./channel/item')[:3]:
-            title = item.find('title').text.split(' - ')[0]
-            items.append(f"🗞️ **{title}**\n[Lire la news]({item.find('link').text})")
+        items = [f"◈ **{item.find('title').text.split(' - ')[0]}**\n└ [Consulter]({item.find('link').text})" for item in root.findall('./channel/item')[:3]]
         return "\n\n".join(items)
     except:
-        return "⚠️ *Le journal est bloqué par la neige...*"
+        return "◈ *Synchronisation des flux impossible...*"
 
-def get_weather_data():
+def get_atmosphere():
+    # Récupération météo Martigny + prévisions 7h-20h
     try:
-        url = "https://api.open-meteo.com/v1/forecast?latitude=46.10&longitude=7.07&hourly=temperature_2m,weather_code&current=temperature_2m,weather_code&timezone=Europe/Berlin"
-        r = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'}).json()
+        res = requests.get("https://api.open-meteo.com/v1/forecast?latitude=46.10&longitude=7.07&hourly=temperature_2m,weather_code&current=temperature_2m,weather_code&timezone=Europe/Berlin").json()
+        curr = res["current"]
+        hourly = res["hourly"]
         
-        curr = r["current"]
-        hourly = r["hourly"]
-        
-        forecast_text = ""
-        # On affiche les heures de 7 (index 7) à 20 (index 20)
-        # On utilise un pas de 2 ou 3 heures pour ne pas que le message soit trop long sur téléphone
-        for i in range(7, 21, 2): 
-            time_str = f"{i}h00"
-            temp = hourly["temperature_2m"][i]
-            code = hourly["weather_code"][i]
-            icon = "☀️" if code <= 2 else "☁️" if code <= 48 else "🌧️"
-            forecast_text += f"`{time_str}` {icon} **{temp}°C** "
-            if i == 13: forecast_text += "\n" # Retour à la ligne au milieu pour faire propre
+        timeline = ""
+        for i in range(7, 21, 2):
+            icon = "☀️" if hourly["weather_code"][i] <= 2 else "☁️" if hourly["weather_code"][i] <= 48 else "💧"
+            timeline += f"**{i}h** {icon} `{hourly['temperature_2m'][i]}°`  "
+            if i == 13: timeline += "\n"
 
-        color = 0xf1c40f if curr["weather_code"] <= 2 else 0x3498db if curr["weather_code"] >= 60 else 0x95a5a6
-        img = "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Clouds_over_the_Alps.jpg/800px-Clouds_over_the_Alps.jpg"
+        # GIFs dynamiques selon la météo
         if curr["weather_code"] >= 60:
-            img = "https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/Rain_drops_on_window_02.jpg/800px-Rain_drops_on_window_02.jpg"
-
-        return curr["temperature_2m"], forecast_text, color, img
+            return curr["temperature_2m"], timeline, 0x3498db, "https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJid3BicHNoZzR6bm9iaXp3bm9ueGZueXp4bm9ueGZueXp4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/l0HlMGW6S77CgT8pG/giphy.gif"
+        return curr["temperature_2m"], timeline, 0xf1c40f, "https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJid3BicHNoZzR6bm9iaXp3bm9ueGZueXp4bm9ueGZueXp4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKMGpxx66SDR3m8/giphy.gif"
     except:
-        return "??", "Indisponible", 0x95a5a6, ""
+        return "??", "Timeline indisponible", 0x2f3136, ""
 
-def send_dashboard():
-    temp_now, hourly_text, color, main_img = get_weather_data()
+def run():
+    temp, schedule, color, gif = get_atmosphere()
     lvl = get_level()
-    news = get_news()
-    
+    news = fetch_intel()
+
     payload = {
-        "username": BOT_NAME,
-        "avatar_url": BOT_ICON,
-        "content": "# 🛡️ RAPPORT DU DESTIN\n@everyone",
+        "username": "ORACLE.EXE",
+        # Utilisation du drapeau/blason officiel de Martigny pour l'icône
+        "avatar_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cf/Wappen_Martigny.svg/512px-Wappen_Martigny.svg.png",
+        "content": "@everyone",
         "embeds": [{
-            "title": "🏔️ L'ORACLE ALPIN : ÉDITION COMPLÈTE",
-            "description": (
-                f"👑 **Gonluik** — `LVL {lvl}` 🌈\n"
-                f"👑 **Wardgame** — `LVL {lvl}` 🌈\n"
-                "━━━━━━━━━━━━━━━━━━━━━━"
-            ),
-            "color": color,
-            "fields": [
-                {
-                    "name": "🌡️ TEMPÉRATURE ACTUELLE",
-                    "value": f"**{temp_now}°C** à Martigny",
-                    "inline": True
-                },
-                {
-                    "name": "🕹️ ROBLOX / MINECRAFT",
-                    "value": "Alex's Caves & Gravity Mod",
-                    "inline": True
-                },
-                {
-                    "name": "⏳ PRÉVISIONS DE LA JOURNÉE (7h - 20h)",
-                    "value": hourly_text,
-                    "inline": False
-                },
-                {
-                    "name": "🗞️ INFOS DE DERNIÈRE MINUTE",
-                    "value": news,
-                    "inline": False
-                }
-            ],
-            "image": {"url": main_img},
-            "footer": {"text": f"Généré le {datetime.now().strftime('%d/%m/%Y à %H:%M')}"}
-        }]
-    }
-
-    requests.post(WEBHOOK_URL, json=payload)
-
-if __name__ == "__main__":
-    send_dashboard()
+            "title": "SYSTEM_BOOT_LOG // MARTIGNY",
+            "description": f"\
