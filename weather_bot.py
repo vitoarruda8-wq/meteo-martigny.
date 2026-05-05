@@ -1,7 +1,6 @@
 import requests
 from datetime import datetime
 import xml.etree.ElementTree as ET
-import random
 import traceback
 
 # ---------------------------------------------------------
@@ -10,11 +9,11 @@ import traceback
 WEBHOOK_URL = "https://discord.com/api/webhooks/1500942289130754260/-9fp_jCsQ0yZAcuSEiyJgGG56s-TL1ZkQPhG2NvAe87oGPzOpIjzQJZl_Yqc554GEjzp"
 
 BOT_NAME = "Le Sage des Alpes"
+# Icone : Drapeau Valais / Martigny
 BOT_ICON = "https://www.kellerfahnen.ch/media/catalog/product/cache/e793c9cd0487bda65231eadb2d538fe6/1/7/17548-l.jpg"
-# (URL directe extraite de ton lien Brave)
 
 # ---------------------------------------------------------
-# 🔥 SYSTÈME DE NIVEAUX
+# 🔥 SYSTÈME DE NIVEAUX (Auto-augmentation)
 # ---------------------------------------------------------
 def get_level():
     start_date = datetime(2026, 5, 5).date()
@@ -23,7 +22,7 @@ def get_level():
     return max(1, days_passed + 1)
 
 # ---------------------------------------------------------
-# 🎮 MOD DU JOUR AVEC IMAGE
+# 🎮 MOD DU JOUR (Avec Image CurseForge)
 # ---------------------------------------------------------
 MODS = [
     ("Alex's Caves", 915759),
@@ -31,90 +30,47 @@ MODS = [
     ("Farmer's Delight", 398521),
     ("Biomes O' Plenty", 220318),
     ("Twilight Forest", 227639),
+    ("Sophisticated Backpacks", 422301)
 ]
 
 def get_mod_of_the_day():
-    start_date = datetime(2024, 5, 1).date()
-    days_passed = (datetime.now().date() - start_date).days
-    index = days_passed % len(MODS)
+    days_since_epoch = (datetime.now() - datetime(1970, 1, 1)).days
+    index = days_since_epoch % len(MODS)
     name, project_id = MODS[index]
 
     try:
-        r = requests.get(
-            f"https://api.curseforge.com/v1/mods/{project_id}",
-            headers={"x-api-key": "cfpub-01"},
-            timeout=10
-        )
-        data = r.json()["data"]
-        image = data["logo"]["url"]
-        link = data["links"]["websiteUrl"]
+        # On utilise une image de secours car l'API CurseForge nécessite une clé
+        # Mais on construit un lien vers l'image du logo pour que ça reste beau
+        image_url = f"https://media.forgecdn.net/avatars/thumbnails/{project_id}/600/600/637.png"
+        link = f"https://www.curseforge.com/minecraft/mc-mods/{name.lower().replace(' ', '-').replace(\"'\", '')}"
+        return name, link, image_url
     except:
-        image = None
-        link = "https://www.curseforge.com/"
-
-    return name, link, image
+        return name, "https://www.curseforge.com/", None
 
 # ---------------------------------------------------------
-# 📰 NEWS RTS
+# 📰 NEWS RTS (Correction du chargement)
 # ---------------------------------------------------------
 def get_news():
+    headers = {'User-Agent': 'Mozilla/5.0'}
     try:
-        response = requests.get("https://www.rts.ch/info/titres/flux-rss.xml", timeout=10)
-        response.raise_for_status()
+        response = requests.get("https://www.rts.ch/info/titres/flux-rss.xml", headers=headers, timeout=10)
         root = ET.fromstring(response.content)
         items = []
         for item in root.findall('./channel/item')[:3]:
-            title = item.find('title').text or "Titre indisponible"
-            link = item.find('link').text or "#"
+            title = item.find('title').text
+            link = item.find('link').text
             items.append(f"🔹 [{title}]({link})")
         return "\n".join(items)
     except:
-        return "⚠️ Impossible de charger les actualités RTS."
-
-# ---------------------------------------------------------
-# 🌧️ MESSAGE SPÉCIAL PLUIE / NEIGE
-# ---------------------------------------------------------
-def get_weather_message(precip):
-    if precip >= 70:
-        return "🌧️ **Prépare ton parapluie, Martigny va se faire laver aujourd’hui.**"
-    if precip >= 30:
-        return "🌦️ **Quelques averses prévues, reste sur tes gardes.**"
-    if precip == 0:
-        return "☀️ **Journée claire, les Alpes brillent aujourd’hui.**"
-    return "🌤️ **Temps variable, mais rien d’inquiétant.**"
-
-# ---------------------------------------------------------
-# 🎯 QUÊTES JOURNALIÈRES
-# ---------------------------------------------------------
-QUESTS = [
-    "🌲 Explorer un nouveau biome",
-    "⚒️ Miner 32 minerais",
-    "🐄 Trouver un animal rare",
-    "🏹 Gagner un combat sans dégâts",
-    "🔥 Survivre à la nuit sans dormir",
-    "📦 Crafter un objet que tu n’as jamais crafté",
-    "🗺️ Découvrir un nouveau lieu",
-    "💎 Obtenir un loot rare",
-]
-
-def get_daily_quests():
-    seed = int(datetime.now().strftime("%Y%m%d"))
-    random.seed(seed)
-    return random.sample(QUESTS, 3)
+        return "⚠️ Impossible de charger les actualités pour le moment."
 
 # ---------------------------------------------------------
 # 🛡️ DASHBOARD COMPLET
 # ---------------------------------------------------------
 def send_ultra_dashboard():
-
-    # API météo
-    url = (
-        "https://api.open-meteo.com/v1/forecast?"
-        "latitude=46.10&longitude=7.07&hourly=temperature_2m,precipitation_probability"
-        "&current=temperature_2m,apparent_temperature,wind_speed_10m"
-        "&daily=temperature_2m_max,temperature_2m_min&timezone=Europe/Berlin"
-    )
-
+    # API météo Martigny
+    url = "https://api.open-meteo.com/v1/forecast?latitude=46.10&longitude=7.07&hourly=temperature_2m,precipitation_probability&current=temperature_2m,apparent_temperature,wind_speed_10m&timezone=Europe/Berlin"
+    
     data = requests.get(url, timeout=10).json()
     curr = data["current"]
     h = data["hourly"]
@@ -122,78 +78,67 @@ def send_ultra_dashboard():
     lvl = get_level()
     mod_name, mod_link, mod_image = get_mod_of_the_day()
     news = get_news()
-    quests = get_daily_quests()
-    weather_msg = get_weather_message(h["precipitation_probability"][12])
 
     embed = {
-        "title": "🌄 RAPPORT DU SAGE",
+        "title": "🌄 BULLETIN DE L'ORACLE ALPIN",
         "description": (
             f"**🔴 Gonluik** — `NIVEAU {lvl}` 🏔️\n"
             f"**🔵 Wardgame** — `NIVEAU {lvl}` 🏔️\n"
             "━━━━━━━━━━━━━━━━━━━━"
         ),
-        "color": 0x5A3E36,  # Brun alpin
+        "color": 0x2F3136,  # Gris foncé élégant
         "fields": [
             {
                 "name": "🏔️ MÉTÉO — MARTIGNY",
                 "value": (
                     f"🌡️ **Température :** {curr['temperature_2m']}°C\n"
                     f"💨 **Vent :** {curr['wind_speed_10m']} km/h\n"
-                    f"❄️ **Ressenti :** {curr['apparent_temperature']}°C\n\n"
-                    f"{weather_msg}"
+                    f"❄️ **Ressenti :** {curr['apparent_temperature']}°C"
                 ),
-                "inline": False
+                "inline": True
             },
             {
                 "name": "⏳ PRÉVISIONS",
                 "value": (
-                    f"**12h00** → {h['temperature_2m'][12]}°C ({h['precipitation_probability'][12]}% ☔)\n"
-                    f"**18h00** → {h['temperature_2m'][18]}°C ({h['precipitation_probability'][18]}% ☔)"
+                    f"**Midi :** {h['temperature_2m'][12]}°C ({h['precipitation_probability'][12]}% ☔)\n"
+                    f"**Soir :** {h['temperature_2m'][18]}°C ({h['precipitation_probability'][18]}% ☔)"
                 ),
-                "inline": False
+                "inline": True
             },
             {
-                "name": "📰 ACTUALITÉS RTS",
+                "name": "📰 ACTUALITÉS SUISSES",
                 "value": news,
                 "inline": False
             },
             {
-                "name": "🧩 MOD À LA UNE",
-                "value": f"🔥 **{mod_name}**\n🔗 {mod_link}",
+                "name": "🎮 MOD MINECRAFT 1.20.1",
+                "value": f"🔥 **{mod_name}**\n👉 [Clique ici pour le voir]({mod_link})",
                 "inline": False
             },
             {
-                "name": "🎯 QUÊTES DU JOUR",
-                "value": "\n".join(quests),
+                "name": "🔗 RÉSEAUX",
+                "value": "📱 [TikTok de Gonluik](https://www.tiktok.com/@gonluik00)",
                 "inline": False
             }
         ],
-        "footer": {"text": "Le Sage des Alpes • Oracle v7.0 • Martigny"}
+        "footer": {"text": "Le Sage des Alpes • Martigny • Actualisation auto active"}
     }
+
+    # Si on a une image de mod, on l'affiche en GRAND en bas de l'embed
+    if mod_image:
+        embed["image"] = {"url": mod_image}
 
     payload = {
         "username": BOT_NAME,
         "avatar_url": BOT_ICON,
-        "content": f"🛡️ **RAPPORT DU {datetime.now().strftime('%d/%m/%Y')}**\n@everyone",
+        "content": f"# 🛡️ RAPPORT DU {datetime.now().strftime('%d/%m/%Y')}\n@everyone",
         "embeds": [embed]
     }
 
-    if mod_image:
-        payload["embeds"][0]["thumbnail"] = {"url": mod_image}
-
     requests.post(WEBHOOK_URL, json=payload, timeout=10)
 
-# ---------------------------------------------------------
-# 🚀 LANCEMENT AVEC GESTION D’ERREURS
-# ---------------------------------------------------------
 if __name__ == "__main__":
     try:
         send_ultra_dashboard()
     except Exception:
-        error = traceback.format_exc()
-        requests.post(WEBHOOK_URL, json={
-            "username": BOT_NAME + " — Logs ⚠️",
-            "avatar_url": BOT_ICON,
-            "content": f"⚠️ **Erreur lors de l'exécution :**\n```{error[:1800]}```"
-        })
-        raise
+        print(traceback.format_exc())
