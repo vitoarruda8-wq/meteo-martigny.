@@ -1,8 +1,10 @@
 name: Meteo Matin
 on:
   schedule:
-    - cron: '0 5 * * *'
-  workflow_dispatch:
+    # 06h00 et 07h00 du matin (Heure Suisse/Paris)
+    # Note : GitHub utilise l'heure UTC, donc 4,5 = 6h et 7h en été
+    - cron: '0 4,5 * * *'
+  workflow_dispatch: # Permet toujours de le lancer manuellement
 
 jobs:
   run-bot:
