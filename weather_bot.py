@@ -1,17 +1,23 @@
 import requests
 from datetime import datetime
 import xml.etree.ElementTree as ET
-import hashlib
 import random
 import traceback
 
+# ---------------------------------------------------------
+# 🔧 CONFIG BOT
+# ---------------------------------------------------------
 WEBHOOK_URL = "https://discord.com/api/webhooks/1500942289130754260/-9fp_jCsQ0yZAcuSEiyJgGG56s-TL1ZkQPhG2NvAe87oGPzOpIjzQJZl_Yqc554GEjzp"
+
+BOT_NAME = "Le Sage des Alpes"
+BOT_ICON = "https://www.kellerfahnen.ch/media/catalog/product/cache/e793c9cd0487bda65231eadb2d538fe6/1/7/17548-l.jpg"
+# (URL directe extraite de ton lien Brave)
 
 # ---------------------------------------------------------
 # 🔥 SYSTÈME DE NIVEAUX
 # ---------------------------------------------------------
 def get_level():
-    start_date = datetime(2024, 5, 1).date()
+    start_date = datetime(2026, 5, 5).date()
     today = datetime.now().date()
     days_passed = (today - start_date).days
     return max(1, days_passed + 1)
@@ -33,11 +39,10 @@ def get_mod_of_the_day():
     index = days_passed % len(MODS)
     name, project_id = MODS[index]
 
-    # API CurseForge
     try:
         r = requests.get(
             f"https://api.curseforge.com/v1/mods/{project_id}",
-            headers={"x-api-key": "cfpub-01"},  # clé publique gratuite
+            headers={"x-api-key": "cfpub-01"},
             timeout=10
         )
         data = r.json()["data"]
@@ -75,8 +80,8 @@ def get_weather_message(precip):
     if precip >= 30:
         return "🌦️ **Quelques averses prévues, reste sur tes gardes.**"
     if precip == 0:
-        return "☀️ **Journée tranquille, aucun nuage ne viendra t’embêter.**"
-    return "🌤️ **Temps variable, mais rien de dramatique.**"
+        return "☀️ **Journée claire, les Alpes brillent aujourd’hui.**"
+    return "🌤️ **Temps variable, mais rien d’inquiétant.**"
 
 # ---------------------------------------------------------
 # 🎯 QUÊTES JOURNALIÈRES
@@ -121,20 +126,20 @@ def send_ultra_dashboard():
     weather_msg = get_weather_message(h["precipitation_probability"][12])
 
     embed = {
-        "title": "🌟 RAPPORT LÉGENDAIRE",
+        "title": "🌄 RAPPORT DU SAGE",
         "description": (
-            f"**🔴 Gonluik** — `NIVEAU {lvl}` 🚀\n"
-            f"**🔵 Wardgame** — `NIVEAU {lvl}` 🚀\n"
+            f"**🔴 Gonluik** — `NIVEAU {lvl}` 🏔️\n"
+            f"**🔵 Wardgame** — `NIVEAU {lvl}` 🏔️\n"
             "━━━━━━━━━━━━━━━━━━━━"
         ),
-        "color": 0x8A2BE2,
+        "color": 0x5A3E36,  # Brun alpin
         "fields": [
             {
                 "name": "🏔️ MÉTÉO — MARTIGNY",
                 "value": (
                     f"🌡️ **Température :** {curr['temperature_2m']}°C\n"
                     f"💨 **Vent :** {curr['wind_speed_10m']} km/h\n"
-                    f"☁️ **Ressenti :** {curr['apparent_temperature']}°C\n\n"
+                    f"❄️ **Ressenti :** {curr['apparent_temperature']}°C\n\n"
                     f"{weather_msg}"
                 ),
                 "inline": False
@@ -153,7 +158,7 @@ def send_ultra_dashboard():
                 "inline": False
             },
             {
-                "name": "🎮 MOD À LA UNE",
+                "name": "🧩 MOD À LA UNE",
                 "value": f"🔥 **{mod_name}**\n🔗 {mod_link}",
                 "inline": False
             },
@@ -163,11 +168,12 @@ def send_ultra_dashboard():
                 "inline": False
             }
         ],
-        "footer": {"text": "Oracle v6.0 • Martigny • Quêtes & météo dynamiques"}
+        "footer": {"text": "Le Sage des Alpes • Oracle v7.0 • Martigny"}
     }
 
     payload = {
-        "username": "L'ORACLE DE MARTIGNY 🏔️",
+        "username": BOT_NAME,
+        "avatar_url": BOT_ICON,
         "content": f"🛡️ **RAPPORT DU {datetime.now().strftime('%d/%m/%Y')}**\n@everyone",
         "embeds": [embed]
     }
@@ -186,7 +192,8 @@ if __name__ == "__main__":
     except Exception:
         error = traceback.format_exc()
         requests.post(WEBHOOK_URL, json={
-            "username": "Oracle - Logs ⚠️",
+            "username": BOT_NAME + " — Logs ⚠️",
+            "avatar_url": BOT_ICON,
             "content": f"⚠️ **Erreur lors de l'exécution :**\n```{error[:1800]}```"
         })
         raise
