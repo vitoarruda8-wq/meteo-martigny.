@@ -7,7 +7,7 @@ WEBHOOK_URL = "https://discord.com/api/webhooks/1500942289130754260/-9fp_jCsQ0yZ
 
 def get_level():
     # On ajuste la date pour que tu sois direct à un haut niveau si tu veux
-    start_date = datetime(2024, 5, 1).date()
+    start_date = datetime(2026, 5, 5).date()
     return max(1, (datetime.now().date() - start_date).days)
 
 def get_news():
@@ -97,7 +97,7 @@ def send_dashboard():
     }
 
     payload = {
-        "username": "L'Oracle de Martigny 🏔️",
+        "username": "Martigny info 🏔️",
         "avatar_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cf/Wappen_Martigny.svg/500px-Wappen_Martigny.svg.png",
         "content": "@everyone",
         "embeds": [embed]
