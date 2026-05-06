@@ -1,10 +1,10 @@
-name: Meteo Matin
+name: Test_Oracle_10min
 on:
   schedule:
-    # 06h00 et 07h00 du matin (Heure Suisse/Paris)
-    # Note : GitHub utilise l'heure UTC, donc 4,5 = 6h et 7h en été
-    - cron: '0 4,5 * * *'
-  workflow_dispatch: # Permet toujours de le lancer manuellement
+    # Se lancera à 10h55 UTC (soit 12h55 à Martigny)
+    # On met 12h55 pour être sûr que GitHub ait le temps d'enregistrer le changement
+    - cron: '55 10 * * *'
+  workflow_dispatch:
 
 jobs:
   run-bot:
