@@ -3,7 +3,7 @@ on:
   schedule:
     # 04:05 UTC = 06:05 Martigny (Heure d'été)
     # 05:05 UTC = 07:05 Martigny
-    - cron: '15 12 * * *'
+    - cron: '17 15 * * *'
     - cron: '5 5 * * *'
   workflow_dispatch: # Garde ça pour pouvoir tester manuellement !
 
